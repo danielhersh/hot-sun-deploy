@@ -47,7 +47,7 @@ class Manager(ProcessManager):
         logging.info(f"Manager was built successfully.")
 
 
-    def run_simulator(self, set_progress) -> pd.DataFrame:
+    def run_simulator(self) -> pd.DataFrame:
         """
         activates the simulator for all the time-periods: prepare the data, call the simulator and saves the output
         :return: None

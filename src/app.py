@@ -42,7 +42,7 @@ app.layout = html.Div([navbar,
 ConfigGetter.load_data()
 
 
-@app.long_callback(
+@callback(
     Output("paramerts", "children"),
     Output("df_energy", "data"),
     Output("df_finance", "data"),
@@ -64,10 +64,9 @@ ConfigGetter.load_data()
               Output("progress_bar", "label")],
     prevent_intial_call=True
 )
-def func(set_progress, n, config):
+def func(n, config):
     print("start")
     logging.info("Preprocess - Uploading files")
-    set_progress(("0", "1", "Gathering Data...", "100%"))
     demand_hourly = DemandHourlyStateData()
     if config["solar"]["datasource"] == "PVGIS":
         solar_rad_hourly = SolarProductionHourlyDataPVGIS(config['LOCATION']['longitude'],
@@ -76,7 +75,6 @@ def func(set_progress, n, config):
                                                           config['solar']['loss'])
     else:
         solar_rad_hourly = SolarRadiationHourlyMonthData()
-    set_progress(("1", "1", "Gathering Data...", "100%"))
 
     logging.info("Preprocess - Files uploaded successfully")
 
@@ -84,15 +82,14 @@ def func(set_progress, n, config):
     manager = Manager(demand_hourly, [period_strategy.PeriodStrategy(10000, 100) for i in range(33)], [],
                       solar_rad_hourly,
                       hourly_strategy.GreedyDailyStrategy(), config)
-    output_energy = manager.run_simulator(set_progress)
+    output_energy = manager.run_simulator()
     logging.info("Process - End simulation")
 
     logging.info("Postprocess - Start computing results")
     post_processor = PostProcessor(output_energy)
-    output_post_processor, total_income = post_processor.run_post_processor(set_progress)
+    output_post_processor, total_income = post_processor.run_post_processor()
     logging.info("Postprocess - Start computing results")
 
-    set_progress(("1", "1", "Displaying results...", "100%"))
     return get_parameters(config), output_energy.to_dict('records'), output_post_processor.to_dict('records'), \
            get_display(config, output_energy, output_post_processor)
 
