@@ -1,4 +1,4 @@
-from src.imports import *
+from imports import *
 
 dash.register_page(__name__)
 layout = html.Div([html.Img(src="assets/logo_no_bg.png", className="align-center", style={"position": "absolute", "width": "40%", "left": "30%", "top": "10%"}),

@@ -1,10 +1,15 @@
 import os
 import numpy as np
+from config_manager import ConfigGetter
+from df_objects import DemandHourlyStateData, SolarRadiationHourly, SolarRadiationHourlyMonthData, \
+    SolarProductionHourlyDataPVGIS
+import pandas as pd
 import period_strategy
-from df_objects import DemandHourlyStateData, SolarRadiationHourly
+from df_objects import DemandHourly, SolarRadiationHourly
 from process_manager import ProcessManager
+from period_strategy import PeriodStrategy
 from periodic_simulation import PeriodicSimulation
-from typing import Callable
+from typing import Callable, List
 from imports import *
 from tqdm import tqdm
 from state import State
@@ -20,7 +25,7 @@ class Manager(ProcessManager):
 
 
     def __init__(self,
-                 hourly_electricity_demand: DemandHourlyStateData,
+                 hourly_electricity_demand: DemandHourly,
                  objects_period_strategy: list[period_strategy.PeriodStrategy],
                  periodic_available_area: np.array,
                  hourly_solar_radiation: SolarRadiationHourly,
@@ -37,8 +42,7 @@ class Manager(ProcessManager):
         self.config = config
         self.hourly_electricity_demand = hourly_electricity_demand
         strategy = pd.DataFrame.from_dict(config["STRATEGY"])
-        self.objects_period_strategy = [
-            period_strategy.PeriodStrategy(row["solar_panel_purchased"], row["batteries_purchased"]) for index, row in strategy.iterrows()]
+        self.objects_period_strategy = [period_strategy.PeriodStrategy(row["solar_panel_purchased"], row["batteries_purchased"]) for index, row in strategy.iterrows()]
         self.periodic_available_area = periodic_available_area
         self.hourly_solar_radiation = hourly_solar_radiation
         self.daily_strategy = daily_strategy
@@ -47,7 +51,7 @@ class Manager(ProcessManager):
         logging.info(f"Manager was built successfully.")
 
 
-    def run_simulator(self) -> pd.DataFrame:
+    def run_simulator(self, set_progress) -> pd.DataFrame:
         """
         activates the simulator for all the time-periods: prepare the data, call the simulator and saves the output
         :return: None

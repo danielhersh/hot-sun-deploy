@@ -1,6 +1,6 @@
-from src.imports import *
-from src.df_objects import *
-from src.pages.laod_display import generate_year_enr_graph, generate_day_enr_graph, dict_to_dataframe
+from imports import *
+from df_objects import *
+from pages.laod_display import generate_year_enr_graph, generate_day_enr_graph, dict_to_dataframe
 
 dash.register_page(__name__)
 

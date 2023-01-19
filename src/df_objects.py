@@ -73,7 +73,7 @@ class DemandHourlyCityData(DemandHourly):
     def __init__(self, city):
         self.df = pd.read_csv("data/hourlyConsumptionPrediction.csv", header=[0])
         self.df['Date'] = pd.to_datetime(self.df['Date'], dayfirst=True)
-        city_df = pd.read_csv("src/data/cities_usage_ratio.csv", names=['Name', 'TotalConsumptionPerResident',
+        city_df = pd.read_csv("data/cities_usage_ratio.csv", names=['Name', 'TotalConsumptionPerResident',
                                                                     'TotalGovernmentConsumptionJurisdiction',
                                                                     'Population', 'TotalEnergy'])
         self.city = city
@@ -160,18 +160,22 @@ class SolarProductionHourlyDataPVGIS(SolarRadiationHourly):
         self.latitude = latitude
         self.peakpower = peakpower
         self.loss = loss
+        file_path = f'data/solar_radiation_hourly_long{self.longitude}_lat{self.latitude}_peak{self.peakpower}' \
+                    f'_loss{self.loss}.csv'
+        if not os.path.isfile(file_path):
+            api_url = f"https://re.jrc.ec.europa.eu/api/seriescalc?lat={self.latitude}&lon={longitude}&" \
+                      f"startyear={2016}&endyear={2016}&pvcalculation={1}&peakpower={self.peakpower}&" \
+                      f"loss={self.loss}&optimalinclination={1}&optimalangles={1}&outputformat=csv"
+            response = requests.get(api_url)
 
-        api_url = f"https://re.jrc.ec.europa.eu/api/seriescalc?lat={self.latitude}&lon={longitude}&" \
-                  f"startyear={2016}&endyear={2016}&pvcalculation={1}&peakpower={self.peakpower}&" \
-                  f"loss={self.loss}&optimalinclination={1}&optimalangles={1}&outputformat=csv"
-        response = requests.get(api_url)
-        parse = str(response.content).split(r"\r\n")[10:-10]
-        df = []
-        for i in range(len(parse)):
-            arr = parse[i].split(',')
-            if len(arr) >= 2 and i != 0:
-                df.append([arr[0], float(arr[1])])
-        self.df = pd.DataFrame(df, columns=parse[0].split(',')[:2])
+            with open(file_path, 'w+', newline='') as file_data:
+                writer = csv.writer(file_data, delimiter=',')
+                for line in str(response.content).split(r"\r\n")[10:-10]:
+                    writer.writerow(line.split(','))
+
+        titles = ['time', 'P', 'G(i)', 'H_sun',	'T2m', 'WS10m', 'Int']
+
+        self.df = pd.read_csv(file_path, header=[0])[['time', 'P']]
         self.df['time'] = pd.to_datetime(self.df['time'], format="%Y%m%d:%H%M")
 
 
@@ -194,7 +198,7 @@ class SolarProductionHourlyDataPVGIS(SolarRadiationHourly):
             curr_date = curr_date.replace(year=year)
             curr_date += datetime.timedelta(days=1)
 
-        return production_daily_arr
+        return np.array(production_daily_arr)/1000
 
 
 class Cost(ABC):

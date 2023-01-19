@@ -1,5 +1,5 @@
-from src.imports import *
-from src.df_objects import *
+from imports import *
+from df_objects import *
 
 
 energy_columns = ['Batteries', 'Solar', 'Buying', 'Selling', 'Lost', 'Storaged']

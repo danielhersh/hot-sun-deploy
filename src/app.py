@@ -1,18 +1,18 @@
+import json
 from imports import *
 import period_strategy
 from df_objects import *
 from manager import Manager
 import hourly_strategy
 from post_processor import PostProcessor
-from src.pages.laod_display import get_parameters, get_display
+from pages.laod_display import get_parameters, get_display
 
 logging.info("Start application")
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheLongCallbackManager(cache)
-app = Dash("Hot Sun", use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],
-           suppress_callback_exceptions=True, background_callback_manager=background_callback_manager)
-server = app.server
+application = Dash("Hot Sun", use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],
+                   suppress_callback_exceptions=True, background_callback_manager=background_callback_manager)
 
 navbar = dbc.NavbarSimple(
     children=[
@@ -27,22 +27,21 @@ navbar = dbc.NavbarSimple(
     style={"height": "8vh"}
 )
 
-app.layout = html.Div([navbar,
-                       dash.page_container,
-                       html.Div([html.Div([html.H3("Loading...", id="loading-label"),
+application.layout = html.Div([navbar,
+                            dash.page_container,
+                               html.Div([html.Div([html.H3("Loading...", id="loading-label"),
                                                    dbc.Progress(id="progress_bar",
                                                                 style={'width': '300px', 'height': '20px'})],
                                                   style={"position": "absolute", "left": "50%", "top": "50%",
                                                          "margin-top": "-50px",
                                                          "margin-left": "-150px"})],
                                         id="loading", style={"display": "none"}, className="text-center"),
-                       dcc.Store(id="config", storage_type="memory", data=json.load(open("config.json")))
-                       ], style={"overflow": "hidden"})
-
+                               dcc.Store(id="config", storage_type="memory", data=json.load(open("config.json")))
+                               ], style={"overflow": "hidden"})
 ConfigGetter.load_data()
 
 
-@app.long_callback(
+@application.long_callback(
     Output("paramerts", "children"),
     Output("df_energy", "data"),
     Output("df_finance", "data"),
@@ -64,10 +63,11 @@ ConfigGetter.load_data()
               Output("progress_bar", "label")],
     prevent_intial_call=True
 )
-def func(n, config):
+def func(set_progress, n, config):
     print("start")
     logging.info("Preprocess - Uploading files")
-    demand_hourly = DemandHourlyStateData()
+    set_progress(("0", "1", "Gathering Data...", "100%"))
+    demand_hourly = DemandHourlyCityData(config['LOCATION']['name'])
     if config["solar"]["datasource"] == "PVGIS":
         solar_rad_hourly = SolarProductionHourlyDataPVGIS(config['LOCATION']['longitude'],
                                                           config['LOCATION']['latitude'],
@@ -75,6 +75,7 @@ def func(n, config):
                                                           config['solar']['loss'])
     else:
         solar_rad_hourly = SolarRadiationHourlyMonthData()
+    set_progress(("1", "1", "Gathering Data...", "100%"))
 
     logging.info("Preprocess - Files uploaded successfully")
 
@@ -82,17 +83,18 @@ def func(n, config):
     manager = Manager(demand_hourly, [period_strategy.PeriodStrategy(10000, 100) for i in range(33)], [],
                       solar_rad_hourly,
                       hourly_strategy.GreedyDailyStrategy(), config)
-    output_energy = manager.run_simulator()
+    output_energy = manager.run_simulator(set_progress)
     logging.info("Process - End simulation")
 
     logging.info("Postprocess - Start computing results")
     post_processor = PostProcessor(output_energy)
-    output_post_processor, total_income = post_processor.run_post_processor()
+    output_post_processor, total_income = post_processor.run_post_processor(set_progress)
     logging.info("Postprocess - Start computing results")
 
+    set_progress(("1", "1", "Displaying results...", "100%"))
     return get_parameters(config), output_energy.to_dict('records'), output_post_processor.to_dict('records'), \
            get_display(config, output_energy, output_post_processor)
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    application.run_server(debug=True)
