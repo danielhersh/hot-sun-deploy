@@ -42,7 +42,7 @@ app.layout = html.Div([navbar,
 ConfigGetter.load_data()
 
 
-@callback(
+@app.long_callback(
     Output("paramerts", "children"),
     Output("df_energy", "data"),
     Output("df_finance", "data"),
