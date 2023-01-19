@@ -11,9 +11,9 @@ logging.info("Start application")
 
 cache = diskcache.Cache("./cache")
 background_callback_manager = DiskcacheLongCallbackManager(cache)
-application = Dash("Hot Sun", use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],
+app = Dash("Hot Sun", use_pages=True, external_stylesheets=[dbc.themes.BOOTSTRAP],
                    suppress_callback_exceptions=True, background_callback_manager=background_callback_manager)
-
+server = app.server
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Start", href="/start")),
@@ -27,7 +27,7 @@ navbar = dbc.NavbarSimple(
     style={"height": "8vh"}
 )
 
-application.layout = html.Div([navbar,
+app.layout = html.Div([navbar,
                             dash.page_container,
                                html.Div([html.Div([html.H3("Loading...", id="loading-label"),
                                                    dbc.Progress(id="progress_bar",
@@ -41,7 +41,7 @@ application.layout = html.Div([navbar,
 ConfigGetter.load_data()
 
 
-@application.long_callback(
+@app.long_callback(
     Output("paramerts", "children"),
     Output("df_energy", "data"),
     Output("df_finance", "data"),
@@ -97,4 +97,4 @@ def func(set_progress, n, config):
 
 
 if __name__ == '__main__':
-    application.run_server(debug=True)
+    app.run_server(debug=True)
